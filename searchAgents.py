@@ -485,9 +485,51 @@ def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
     Subsequent calls to this heuristic can access
     problem.heuristicInfo['wallCount']
     """
+    
     position, foodGrid = state
-    "*** YOUR CODE HERE ***"
-    return 0
+    foodList = foodGrid.asList()
+
+    if not foodList:
+        return 0
+
+    def manhattanDistance(point1, point2):
+        return abs(point1[0] - point2[0]) + abs(point1[1] - point2[1])
+
+    # Cache the MST cost for each remaining-food configuration.
+    foodKey = tuple(sorted(foodList))
+    mstCache = problem.heuristicInfo.setdefault('foodMST', {})
+
+    if foodKey not in mstCache:
+        remaining = set(foodList)
+        first = min(remaining)
+        remaining.remove(first)
+        connected = {first}
+        mstCost = 0
+
+        while remaining:
+            bestDistance = float('inf')
+            bestFood = None
+
+            for connectedFood in connected:
+                for candidate in remaining:
+                    distance = manhattanDistance(connectedFood, candidate)
+                    if distance < bestDistance:
+                        bestDistance = distance
+                        bestFood = candidate
+
+            mstCost += bestDistance
+            connected.add(bestFood)
+            remaining.remove(bestFood)
+
+        mstCache[foodKey] = mstCost
+
+    nearestFood = min(
+        manhattanDistance(position, food)
+        for food in foodList
+    )
+
+    return nearestFood + mstCache[foodKey]
+
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"

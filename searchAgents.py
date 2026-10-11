@@ -487,48 +487,29 @@ def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
     """
     
     position, foodGrid = state
-    foodList = foodGrid.asList()
+    food = foodGrid.asList()
 
-    if not foodList:
+    if not food:
         return 0
 
-    def manhattanDistance(point1, point2):
-        return abs(point1[0] - point2[0]) + abs(point1[1] - point2[1])
+    # Store previously calculated maze distances.
+    distanceCache = problem.heuristicInfo.setdefault('foodDistanceCache', {})
 
-    # Cache the MST cost for each remaining-food configuration.
-    foodKey = tuple(sorted(foodList))
-    mstCache = problem.heuristicInfo.setdefault('foodMST', {})
+    heuristic = [0]
 
-    if foodKey not in mstCache:
-        remaining = set(foodList)
-        first = min(remaining)
-        remaining.remove(first)
-        connected = {first}
-        mstCost = 0
+    for pos in food:
+        key = tuple(sorted((position, pos)))
 
-        while remaining:
-            bestDistance = float('inf')
-            bestFood = None
+        if key not in distanceCache:
+            distanceCache[key] = mazeDistance(
+                position, pos, problem.startingGameState
+            )
 
-            for connectedFood in connected:
-                for candidate in remaining:
-                    distance = manhattanDistance(connectedFood, candidate)
-                    if distance < bestDistance:
-                        bestDistance = distance
-                        bestFood = candidate
+        heuristic.append(distanceCache[key])
 
-            mstCost += bestDistance
-            connected.add(bestFood)
-            remaining.remove(bestFood)
+    # Return the distance to the farthest remaining food dot.
+    return max(heuristic)
 
-        mstCache[foodKey] = mstCost
-
-    nearestFood = min(
-        manhattanDistance(position, food)
-        for food in foodList
-    )
-
-    return nearestFood + mstCache[foodKey]
 
 
 class ClosestDotSearchAgent(SearchAgent):
